@@ -1,0 +1,7 @@
+{
+  "buildCommand": "cd hostel-frontend && npm install && npm run build",
+  "outputDirectory": "hostel-frontend/dist",
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}

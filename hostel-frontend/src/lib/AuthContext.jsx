@@ -11,6 +11,8 @@ function buildUser(u, profile = null) {
     u.user_metadata?.full_name ||
     u.user_metadata?.name ||
     u.user_metadata?.display_name ||
+    u.identities?.[0]?.identity_data?.full_name ||
+    u.identities?.[0]?.identity_data?.name ||
     u.email?.split("@")[0] ||
     "User";
   return {

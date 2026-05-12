@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import useBooking from "../hooks/useBooking";
 import calculatePrice from "../utils/calculatePrice";
 import { formatCurrency } from "../utils/formatDate";
+import { useAuth } from "../lib/AuthContext";
 
 const initialForm = {
   name: "",
@@ -16,6 +17,7 @@ const initialForm = {
 export default function BookingModal({ room, isOpen, onClose }) {
   const [form, setForm] = useState(initialForm);
   const { submitting, error, success, setError, setSuccess, createBooking } = useBooking();
+  const { user, openSignIn } = useAuth();
 
   useEffect(() => {
     if (!isOpen) {
@@ -41,8 +43,24 @@ export default function BookingModal({ room, isOpen, onClose }) {
     };
   }, [isOpen, onClose]);
 
-  if (!isOpen || !room) {
-    return null;
+  if (!isOpen || !room) return null;
+
+  // Login required for booking
+  if (!user) {
+    return (
+      <div className="modal-backdrop" role="presentation" onClick={onClose}>
+        <div className="booking-modal" role="dialog" onClick={(e) => e.stopPropagation()}
+          style={{ textAlign: "center", padding: "2.5rem" }}>
+          <button className="modal-close" type="button" onClick={onClose}>✕</button>
+          <div style={{ fontSize: 48, marginBottom: "1rem" }}>🔐</div>
+          <h2 style={{ marginBottom: "0.75rem" }}>Login Required</h2>
+          <p style={{ marginBottom: "1.5rem" }}>Room book karne ke liye pehle Sign In karo.</p>
+          <button className="button button--primary" onClick={() => { onClose(); openSignIn(); }}>
+            Sign In karo
+          </button>
+        </div>
+      </div>
+    );
   }
 
   const pricing = calculatePrice(room.price_per_night, form.checkIn, form.checkOut, form.guests);

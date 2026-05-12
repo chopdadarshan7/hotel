@@ -8,11 +8,14 @@ import {
 } from "react-router-dom";
 import Footer from "./components/Footer";
 import Navbar from "./components/Navbar";
+import AuthModal from "./components/AuthModal";
+import Toast from "./components/Toast";
 import WhatsAppButton from "./components/WhatsAppButton";
 import About from "./pages/About";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminLogin from "./pages/AdminLogin";
 import Contact from "./pages/Contact";
+import Dashboard from "./pages/Dashboard";
 import Gallery from "./pages/Gallery";
 import Home from "./pages/Home";
 import Rooms from "./pages/Rooms";
@@ -185,6 +188,8 @@ export default function App() {
   return (
     <>
       <ScrollToTop />
+      <AuthModal />
+      <Toast />
       <Routes>
         <Route element={<PublicLayout />}>
           <Route path="/" element={<Home />} />
@@ -192,6 +197,7 @@ export default function App() {
           <Route path="/gallery" element={<Gallery />} />
           <Route path="/about" element={<About />} />
           <Route path="/contact" element={<Contact />} />
+          <Route path="/dashboard" element={<Dashboard />} />
         </Route>
 
         <Route

@@ -4,12 +4,19 @@ import { hasSupabaseEnv, requireSupabase } from "./supabase";
 
 const AuthContext = createContext(null);
 
-function buildUser(u) {
+function buildUser(u, profile = null) {
   if (!u) return null;
+  const displayName =
+    profile?.full_name ||
+    u.user_metadata?.full_name ||
+    u.user_metadata?.name ||
+    u.user_metadata?.display_name ||
+    u.email?.split("@")[0] ||
+    "User";
   return {
     ...u,
-    displayName: u.user_metadata?.full_name || u.user_metadata?.name || u.email?.split("@")[0],
-    isAdmin: emailIsAdmin(u.email) || u.user_metadata?.role === "admin",
+    displayName,
+    isAdmin: emailIsAdmin(u.email) || profile?.role === "admin" || u.user_metadata?.role === "admin",
   };
 }
 
@@ -33,21 +40,38 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     if (!hasSupabaseEnv) { setLoading(false); return; }
     requireSupabase().then((supabase) => {
-      supabase.auth.getSession().then(({ data }) => {
-        const u = buildUser(data.session?.user || null);
-        setUser(u);
-        if (u) localStorage.setItem("auth_user", JSON.stringify(u));
-        else localStorage.removeItem("auth_user");
+      supabase.auth.getSession().then(async ({ data }) => {
+        const rawUser = data.session?.user || null;
+        if (rawUser) {
+          let profile = null;
+          try {
+            const { data: p } = await supabase.from("profiles").select("*").eq("id", rawUser.id).maybeSingle();
+            profile = p;
+          } catch (_) {}
+          const u = buildUser(rawUser, profile);
+          setUser(u);
+          localStorage.setItem("auth_user", JSON.stringify(u));
+        } else {
+          setUser(null);
+          localStorage.removeItem("auth_user");
+        }
         setLoading(false);
       });
-      supabase.auth.onAuthStateChange((_e, session) => {
-        const u = buildUser(session?.user || null);
-        setUser(u);
-        if (u) {
+      supabase.auth.onAuthStateChange(async (_e, session) => {
+        const rawUser = session?.user || null;
+        if (rawUser) {
+          let profile = null;
+          try {
+            const { data: p } = await supabase.from("profiles").select("*").eq("id", rawUser.id).maybeSingle();
+            profile = p;
+          } catch (_) {}
+          const u = buildUser(rawUser, profile);
+          setUser(u);
           localStorage.setItem("auth_user", JSON.stringify(u));
           setShowAuth(false);
-          showToast(`Welcome back, ${u.displayName}! 🎉`);
+          showToast(`Welcome, ${u.displayName}! 🎉`);
         } else {
+          setUser(null);
           localStorage.removeItem("auth_user");
         }
       });

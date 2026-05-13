@@ -59,7 +59,7 @@ export default function Navbar() {
             </NavLink>
           ))}
 
-          <span style={{ width: 1, height: 24, background: "rgba(28,28,28,0.12)", margin: "0 0.25rem" }} />
+          <span className="navbar__divider" />
 
           {user ? (
             <div className="nav-profile" ref={dropdownRef}>
@@ -123,7 +123,7 @@ export default function Navbar() {
             </>
           )}
 
-          <span style={{ width: 1, height: 24, background: "rgba(28,28,28,0.12)", margin: "0 0.25rem" }} />
+          <span className="navbar__divider" />
 
           {/* Admin Panel — only for admins or when not logged in */}
           {(!user || user.isAdmin) && (

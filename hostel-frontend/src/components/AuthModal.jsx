@@ -1,60 +1,58 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
 import { useAuth } from "../lib/AuthContext";
-import { emailIsAdmin } from "../lib/admin";
-import { hasSupabaseEnv, requireSupabase } from "../lib/supabase";
+import { formatAuthError } from "../lib/authErrors";
 
 export default function AuthModal() {
-  const { showAuth, authMode, closeAuth } = useAuth();
-  const navigate = useNavigate();
+  const {
+    showAuth,
+    authMode,
+    closeAuth,
+    signInWithGoogle,
+    signInWithPassword,
+    signUpWithPassword,
+  } = useAuth();
   const [tab, setTab] = useState(authMode);
   const [form, setForm] = useState({ name: "", email: "", password: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
+  useEffect(() => {
+    if (showAuth) setTab(authMode);
+  }, [authMode, showAuth]);
+
   if (!showAuth) return null;
 
   const handle = (e) => setForm((p) => ({ ...p, [e.target.name]: e.target.value }));
 
   const handleGoogleLogin = async () => {
-    setLoading(true); setError("");
+    setLoading(true);
+    setError("");
     try {
-      const supabase = await requireSupabase();
-      const { error: err } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: { redirectTo: window.location.origin },
-      });
-      if (err) throw err;
+      await signInWithGoogle();
     } catch (err) {
-      setError(err.message || "Google login failed.");
+      setError(formatAuthError(err.message));
       setLoading(false);
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true); setError(""); setSuccess("");
+    setLoading(true);
+    setError("");
+    setSuccess("");
     try {
-      if (!hasSupabaseEnv) throw new Error("Supabase not configured.");
-      const supabase = await requireSupabase();
       if (tab === "signin") {
-        const { data, error: err } = await supabase.auth.signInWithPassword({ email: form.email, password: form.password });
-        if (err) throw err;
-        setSuccess("✅ Login successful! Redirecting...");
-        const isAdmin = emailIsAdmin(form.email) || data.user?.user_metadata?.role === "admin";
-        setTimeout(() => { closeAuth(); navigate(isAdmin ? "/admin" : "/dashboard"); }, 900);
+        await signInWithPassword(form.email, form.password);
+        setSuccess("✅ Login successful!");
+        closeAuth();
       } else {
-        const { error: err } = await supabase.auth.signUp({
-          email: form.email, password: form.password,
-          options: { data: { full_name: form.name } },
-        });
-        if (err) throw err;
-        setSuccess("✅ Account ban gaya! Ab login karo.");
-        setTimeout(() => { setTab("signin"); setSuccess(""); }, 1500);
+        await signUpWithPassword(form.email, form.password, form.name);
+        setSuccess("✅ Account ban gaya!");
+        closeAuth();
       }
     } catch (err) {
-      setError(err.message || "Kuch galat hua.");
+      setError(formatAuthError(err.message));
     } finally {
       setLoading(false);
     }
@@ -82,21 +80,17 @@ export default function AuthModal() {
           ))}
         </div>
 
-        {/* Google Button */}
-        <button type="button" onClick={handleGoogleLogin} disabled={loading}
-          style={S.googleBtn}>
+        <button type="button" onClick={handleGoogleLogin} disabled={loading} style={S.googleBtn}>
           <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width={18} height={18} alt="G" />
           Google se Continue karo
         </button>
 
-        {/* Divider */}
         <div style={S.divider}>
           <div style={S.dividerLine} />
           <span style={S.dividerText}>ya</span>
           <div style={S.dividerLine} />
         </div>
 
-        {/* Form */}
         <form onSubmit={handleSubmit} style={{ display: "grid", gap: "1rem" }}>
           {tab === "signup" && (
             <div style={S.field}>

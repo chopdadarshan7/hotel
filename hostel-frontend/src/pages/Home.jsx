@@ -9,7 +9,7 @@ import { testimonials, whyUsItems } from "../lib/siteData";
 export default function Home() {
   const navigate = useNavigate();
   const { rooms, loading: roomsLoading } = useRooms();
-  const { galleryItems, loading: galleryLoading } = useGallery();
+  const { items: galleryItems, loading: galleryLoading } = useGallery();
   const [bookingRoom, setBookingRoom] = useState(null);
   const [quickBooking, setQuickBooking] = useState({
     checkIn: "",

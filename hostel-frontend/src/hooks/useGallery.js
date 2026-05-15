@@ -1,70 +1,45 @@
 import { useEffect, useState } from "react";
+import { hasFirebaseEnv } from "../firebase/config";
+import { getGallery as getFirebaseGallery } from "../firebase/services";
 import { sampleGallery } from "../lib/siteData";
-import { hasSupabaseEnv, requireSupabase } from "../lib/supabase";
 
 export default function useGallery() {
-  const [galleryItems, setGalleryItems] = useState(sampleGallery);
+  const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [isFallback, setIsFallback] = useState(!hasSupabaseEnv);
+  const [isFallback, setIsFallback] = useState(!hasFirebaseEnv);
 
   useEffect(() => {
     let active = true;
 
-    async function loadGallery() {
-      if (!hasSupabaseEnv) {
-        setLoading(false);
+    async function load() {
+      if (!hasFirebaseEnv) {
+        if (active) {
+          setItems(sampleGallery);
+          setIsFallback(true);
+          setLoading(false);
+        }
         return;
       }
 
       try {
-        const supabase = await requireSupabase();
-        const { data, error: fetchError } = await supabase
-          .from("gallery")
-          .select("*")
-          .order("created_at", { ascending: false });
-
-        if (fetchError) {
-          throw fetchError;
-        }
-
-        if (!active) {
-          return;
-        }
-
-        if (data?.length) {
-          setGalleryItems(data);
-          setIsFallback(false);
-        } else {
-          setGalleryItems(sampleGallery);
-          setIsFallback(true);
-        }
-      } catch (loadError) {
-        if (!active) {
-          return;
-        }
-
-        setGalleryItems(sampleGallery);
+        const data = await getFirebaseGallery();
+        if (!active) return;
+        setItems(data.length ? data : sampleGallery);
+        setIsFallback(!data.length);
+      } catch (err) {
+        if (!active) return;
+        setItems(sampleGallery);
         setIsFallback(true);
-        setError(loadError.message || "Unable to load gallery from Supabase.");
+        setError(err.message || "Unable to load gallery.");
       } finally {
-        if (active) {
-          setLoading(false);
-        }
+        if (active) setLoading(false);
       }
     }
 
-    loadGallery();
-
-    return () => {
-      active = false;
-    };
+    load();
+    return () => { active = false; };
   }, []);
 
-  return {
-    galleryItems,
-    loading,
-    error,
-    isFallback,
-  };
+  return { items, loading, error, isFallback };
 }

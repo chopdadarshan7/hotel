@@ -33,7 +33,7 @@ export default function Footer() {
       </div>
       <div className="container footer__bottom">
         <span>© {new Date().getFullYear()} Us Hostel</span>
-        <span>Built with Supabase, React, and a warm welcome.</span>
+        <span>Built with React and a warm welcome.</span>
       </div>
     </footer>
   );

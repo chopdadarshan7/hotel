@@ -1,70 +1,45 @@
 import { useEffect, useState } from "react";
+import { hasFirebaseEnv } from "../firebase/config";
+import { getRooms as getFirebaseRooms } from "../firebase/services";
 import { sampleRooms } from "../lib/siteData";
-import { hasSupabaseEnv, requireSupabase } from "../lib/supabase";
 
 export default function useRooms() {
-  const [rooms, setRooms] = useState(sampleRooms);
+  const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [isFallback, setIsFallback] = useState(!hasSupabaseEnv);
+  const [isFallback, setIsFallback] = useState(!hasFirebaseEnv);
 
   useEffect(() => {
     let active = true;
 
-    async function loadRooms() {
-      if (!hasSupabaseEnv) {
-        setLoading(false);
+    async function load() {
+      if (!hasFirebaseEnv) {
+        if (active) {
+          setRooms(sampleRooms);
+          setIsFallback(true);
+          setLoading(false);
+        }
         return;
       }
 
       try {
-        const supabase = await requireSupabase();
-        const { data, error: fetchError } = await supabase
-          .from("rooms")
-          .select("*")
-          .order("price_per_night", { ascending: true });
-
-        if (fetchError) {
-          throw fetchError;
-        }
-
-        if (!active) {
-          return;
-        }
-
-        if (data?.length) {
-          setRooms(data);
-          setIsFallback(false);
-        } else {
-          setRooms(sampleRooms);
-          setIsFallback(true);
-        }
-      } catch (loadError) {
-        if (!active) {
-          return;
-        }
-
+        const data = await getFirebaseRooms();
+        if (!active) return;
+        setRooms(data.length ? data : sampleRooms);
+        setIsFallback(!data.length);
+      } catch (err) {
+        if (!active) return;
         setRooms(sampleRooms);
         setIsFallback(true);
-        setError(loadError.message || "Unable to load rooms from Supabase.");
+        setError(err.message || "Unable to load rooms.");
       } finally {
-        if (active) {
-          setLoading(false);
-        }
+        if (active) setLoading(false);
       }
     }
 
-    loadRooms();
-
-    return () => {
-      active = false;
-    };
+    load();
+    return () => { active = false; };
   }, []);
 
-  return {
-    rooms,
-    loading,
-    error,
-    isFallback,
-  };
+  return { rooms, loading, error, isFallback };
 }

@@ -24,8 +24,17 @@ export default function BookingModal({ room, isOpen, onClose }) {
       setForm(initialForm);
       setError("");
       setSuccess("");
+      return;
     }
-  }, [isOpen, setError, setSuccess]);
+
+    if (user) {
+      setForm((current) => ({
+        ...current,
+        name: current.name || user.displayName || "",
+        email: current.email || user.email || "",
+      }));
+    }
+  }, [isOpen, setError, setSuccess, user]);
 
   useEffect(() => {
     const handleEscape = (event) => {
@@ -94,8 +103,7 @@ export default function BookingModal({ room, isOpen, onClose }) {
           <p className="eyebrow">Book {room.name}</p>
           <h2>Reserve your stay in seconds.</h2>
           <p>
-            Choose your dates, add your guest details, and we will save your booking in Supabase
-            and trigger the confirmation flow.
+            Choose your dates, add your guest details, and we will save your booking.
           </p>
         </div>
 

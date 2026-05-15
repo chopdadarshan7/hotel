@@ -1,6 +1,7 @@
-import { hasSupabaseEnv, requireSupabase } from "./supabase";
+import { fetchUserProfile } from "../firebase/services";
+import { hasFirebaseEnv } from "../firebase/config";
 
-const adminEmails = (import.meta.env.VITE_ADMIN_EMAILS || "")
+const adminEmails = (import.meta.env.VITE_ADMIN_EMAILS || "admin@hostel.com")
   .split(",")
   .map((value) => value.trim().toLowerCase())
   .filter(Boolean);
@@ -10,28 +11,11 @@ export function emailIsAdmin(email) {
 }
 
 export async function fetchProfile(userId) {
-  if (!hasSupabaseEnv || !userId) {
-    return null;
-  }
-
-  const supabase = await requireSupabase();
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", userId)
-    .maybeSingle();
-
-  if (error) {
-    throw error;
-  }
-
-  return data;
+  if (!hasFirebaseEnv || !userId) return null;
+  return fetchUserProfile(userId);
 }
 
-export function resolveAdminAccess(user, profile) {
-  if (!user) {
-    return false;
-  }
-
-  return profile?.role === "admin" || emailIsAdmin(user.email);
+export function resolveAdminAccess(firebaseUser, profile) {
+  if (!firebaseUser) return false;
+  return profile?.role === "admin" || emailIsAdmin(firebaseUser.email);
 }

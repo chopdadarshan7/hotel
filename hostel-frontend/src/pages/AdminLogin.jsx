@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
+import { hasFirebaseEnv } from "../firebase/config";
+import { signInWithEmail, signOutUser } from "../firebase/services";
 import { fetchProfile, resolveAdminAccess } from "../lib/admin";
-import { hasSupabaseEnv, requireSupabase } from "../lib/supabase";
 
 export default function AdminLogin({ adminState, refreshAdmin }) {
   const navigate = useNavigate();
@@ -22,17 +23,11 @@ export default function AdminLogin({ adminState, refreshAdmin }) {
     setSubmitting(true);
     setError("");
     try {
-      if (!hasSupabaseEnv) throw new Error("Supabase environment keys missing.");
-      const supabase = await requireSupabase();
-      const { data, error: signInError } = await supabase.auth.signInWithPassword({
-        email: form.email,
-        password: form.password,
-      });
-      if (signInError) throw signInError;
-      const profile = await fetchProfile(data.user.id);
-      const hasAccess = resolveAdminAccess(data.user, profile);
-      if (!hasAccess) {
-        await supabase.auth.signOut();
+      if (!hasFirebaseEnv) throw new Error("Firebase configure karo (.env file).");
+      const firebaseUser = await signInWithEmail(form.email, form.password);
+      const profile = await fetchProfile(firebaseUser.uid);
+      if (!resolveAdminAccess(firebaseUser, profile)) {
+        await signOutUser();
         throw new Error("Is account ko admin access nahi hai.");
       }
       if (refreshAdmin) await refreshAdmin();
@@ -67,6 +62,9 @@ export default function AdminLogin({ adminState, refreshAdmin }) {
             <span style={styles.eyebrow}>Admin Portal</span>
             <h2 style={styles.title}>Welcome Back</h2>
             <p style={styles.subtitle}>Apna admin account se login karo</p>
+            <p style={{ fontSize: "0.82rem", color: "rgba(28,28,28,0.5)", marginTop: "0.5rem" }}>
+              Default: admin@hostel.com / admin123
+            </p>
           </div>
 
           <form onSubmit={handleSubmit} style={styles.form}>

@@ -6,7 +6,7 @@ import useRooms from "../hooks/useRooms";
 import { roomTypeOptions } from "../lib/siteData";
 
 export default function Rooms() {
-  const { rooms, loading, error, isFallback } = useRooms();
+  const { rooms, loading, error } = useRooms();
   const [searchParams] = useSearchParams();
   const [selectedRoom, setSelectedRoom] = useState(null);
   const [typeFilter, setTypeFilter] = useState("all");
@@ -89,8 +89,6 @@ export default function Rooms() {
           </div>
 
           {error ? <p className="inline-message">{error}</p> : null}
-          {isFallback ? <p className="inline-message">Showing sample room content until Supabase is connected.</p> : null}
-
           <div className="room-grid room-grid--dense">
             {(loading ? Array.from({ length: 4 }) : filteredRooms).map((room, index) =>
               loading ? (

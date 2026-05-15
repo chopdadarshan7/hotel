@@ -8,7 +8,7 @@ export default function Navbar() {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
-  const { user, openSignIn, openSignUp, logout } = useAuth();
+  const { user, loading, openSignIn, openSignUp, logout } = useAuth();
 
   const displayName = user?.displayName || user?.email?.split("@")[0] || "User";
   const avatarLetter = displayName[0]?.toUpperCase();
@@ -45,7 +45,7 @@ export default function Navbar() {
 
         {/* Mobile right — auth buttons + toggle */}
         <div className="navbar__mobile-right">
-          {!user && (
+          {!loading && !user && (
             <>
               <button className="button button--ghost button--small"
                 onClick={() => { openSignIn(); setOpen(false); }}>
@@ -75,7 +75,9 @@ export default function Navbar() {
 
           <span className="navbar__divider" />
 
-          {user ? (
+          {loading ? (
+            <span style={{ fontSize: "0.85rem", opacity: 0.5, padding: "0.5rem" }}>...</span>
+          ) : user ? (
             <div className="nav-profile" ref={dropdownRef}>
               {/* Avatar + name + status */}
               <button
@@ -84,11 +86,7 @@ export default function Navbar() {
                 aria-expanded={dropdownOpen}
               >
                 <div className="nav-avatar">
-                  {user.avatarUrl ? (
-                    <img className="nav-avatar__img" src={user.avatarUrl} alt={displayName} />
-                  ) : (
-                    avatarLetter
-                  )}
+                  {avatarLetter}
                 </div>
                 <div className="nav-profile__info">
                   <span className="nav-profile__greeting">Hi, {displayName}</span>
@@ -107,11 +105,7 @@ export default function Navbar() {
                 <div className="nav-dropdown">
                   <div className="nav-dropdown__header">
                     <div className="nav-avatar nav-avatar--lg">
-                      {user.avatarUrl ? (
-                        <img className="nav-avatar__img nav-avatar__img--lg" src={user.avatarUrl} alt={displayName} />
-                      ) : (
-                        avatarLetter
-                      )}
+                      {avatarLetter}
                     </div>
                     <div>
                       <strong>{displayName}</strong>
@@ -123,7 +117,7 @@ export default function Navbar() {
                   <button className="nav-dropdown__item" onClick={() => { setDropdownOpen(false); navigate(user.isAdmin ? "/admin" : "/dashboard"); }}>
                     👤 My Profile
                   </button>
-                  <button className="nav-dropdown__item" onClick={() => { setDropdownOpen(false); navigate("/rooms"); }}>
+                  <button className="nav-dropdown__item" onClick={() => { setDropdownOpen(false); navigate("/dashboard"); }}>
                     🛏 My Bookings
                   </button>
                   <button className="nav-dropdown__item" onClick={() => { setDropdownOpen(false); }}>

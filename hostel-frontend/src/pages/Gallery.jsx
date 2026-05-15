@@ -2,7 +2,7 @@ import GalleryGrid from "../components/GalleryGrid";
 import useGallery from "../hooks/useGallery";
 
 export default function Gallery() {
-  const { galleryItems, loading, error, isFallback } = useGallery();
+  const { items: galleryItems, loading, error } = useGallery();
 
   return (
     <>
@@ -11,8 +11,7 @@ export default function Gallery() {
           <p className="eyebrow">Gallery</p>
           <h1>See the rooms, common spaces, and moments that shape the stay.</h1>
           <p>
-            Browse room details, social spaces, event snapshots, and food moments. Images can be
-            powered directly from Supabase Storage.
+            Browse room details, social spaces, event snapshots, and food moments.
           </p>
         </div>
       </section>
@@ -20,7 +19,6 @@ export default function Gallery() {
       <section className="section">
         <div className="container">
           {error ? <p className="inline-message">{error}</p> : null}
-          {isFallback ? <p className="inline-message">Showing sample gallery content until Supabase Storage is connected.</p> : null}
           <GalleryGrid items={galleryItems} loading={loading} />
         </div>
       </section>

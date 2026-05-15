@@ -1,7 +1,20 @@
 import { useEffect, useState } from "react";
 import { formatCurrency, formatDate } from "../utils/formatDate";
 import { bookingStatusOptions, galleryCategoryOptions } from "../lib/siteData";
-import { hasSupabaseEnv, requireSupabase } from "../lib/supabase";
+import { hasFirebaseEnv } from "../firebase/config";
+import {
+  deleteGalleryItem,
+  deleteRoom,
+  getBookings,
+  getContacts,
+  getGallery,
+  getRooms,
+  saveGalleryItem,
+  saveRoom,
+  signOutUser,
+  updateBookingStatus,
+  uploadFiles,
+} from "../firebase/services";
 
 const initialRoomForm = {
   id: "",
@@ -44,31 +57,6 @@ function AdminSection({ title, description, children }) {
   );
 }
 
-async function uploadFilesToBucket(bucket, files) {
-  if (!files?.length) {
-    return [];
-  }
-
-  const supabase = await requireSupabase();
-  const uploaded = [];
-
-  for (const file of files) {
-    const extension = file.name.split(".").pop();
-    const path = `${bucket}/${crypto.randomUUID()}.${extension}`;
-    const { error: uploadError } = await supabase.storage.from(bucket).upload(path, file, {
-      upsert: false,
-    });
-
-    if (uploadError) {
-      throw uploadError;
-    }
-
-    const { data } = supabase.storage.from(bucket).getPublicUrl(path);
-    uploaded.push(data.publicUrl);
-  }
-
-  return uploaded;
-}
 
 export default function AdminDashboard({ adminState, refreshAdmin }) {
   const [activeTab, setActiveTab] = useState("rooms");
@@ -90,43 +78,18 @@ export default function AdminDashboard({ adminState, refreshAdmin }) {
     let active = true;
 
     async function loadAdminData() {
-      if (!hasSupabaseEnv) {
+      if (!hasFirebaseEnv) {
         setLoading(false);
-        setError("Supabase is not configured yet. Add your environment keys to enable the dashboard.");
+        setError("Firebase configure karo. .env file mein keys add karo.");
         return;
       }
 
       try {
-        const supabase = await requireSupabase();
-        const [roomsResult, bookingsResult, galleryResult, contactsResult] = await Promise.all([
-          supabase.from("rooms").select("*").order("created_at", { ascending: false }),
-          supabase
-            .from("bookings")
-            .select("*, rooms(name)")
-            .order("created_at", { ascending: false }),
-          supabase.from("gallery").select("*").order("created_at", { ascending: false }),
-          supabase.from("contacts").select("*").order("created_at", { ascending: false }),
-        ]);
-
-        const firstError = [
-          roomsResult.error,
-          bookingsResult.error,
-          galleryResult.error,
-          contactsResult.error,
-        ].find(Boolean);
-
-        if (firstError) {
-          throw firstError;
-        }
-
-        if (!active) {
-          return;
-        }
-
-        setRooms(roomsResult.data || []);
-        setBookings(bookingsResult.data || []);
-        setGalleryItems(galleryResult.data || []);
-        setContacts(contactsResult.data || []);
+        if (!active) return;
+        setRooms(await getRooms());
+        setBookings(await getBookings());
+        setGalleryItems(await getGallery());
+        setContacts(await getContacts());
       } catch (loadError) {
         if (!active) {
           return;
@@ -153,11 +116,8 @@ export default function AdminDashboard({ adminState, refreshAdmin }) {
   };
 
   const handleLogout = async () => {
-    const supabase = await requireSupabase();
-    await supabase.auth.signOut();
-    if (refreshAdmin) {
-      await refreshAdmin();
-    }
+    await signOutUser();
+    if (refreshAdmin) await refreshAdmin();
   };
 
   const handleRoomSubmit = async (event) => {
@@ -166,9 +126,9 @@ export default function AdminDashboard({ adminState, refreshAdmin }) {
     setError("");
 
     try {
-      const supabase = await requireSupabase();
-      const uploadedImages = await uploadFilesToBucket("room-images", roomFiles);
+      const uploadedImages = await uploadFiles("room-images", roomFiles);
       const payload = {
+        id: roomForm.id || undefined,
         name: roomForm.name,
         type: roomForm.type,
         description: roomForm.description,
@@ -180,37 +140,12 @@ export default function AdminDashboard({ adminState, refreshAdmin }) {
           .map((item) => item.trim())
           .filter(Boolean),
         available: roomForm.available,
-        images: [...roomForm.images, ...uploadedImages],
+        images: [...(roomForm.images || []), ...uploadedImages],
       };
 
-      if (roomForm.id) {
-        const { data, error: updateError } = await supabase
-          .from("rooms")
-          .update(payload)
-          .eq("id", roomForm.id)
-          .select("*")
-          .single();
-
-        if (updateError) {
-          throw updateError;
-        }
-
-        setRooms((current) => current.map((room) => (room.id === data.id ? data : room)));
-        showNotice("Room updated.");
-      } else {
-        const { data, error: insertError } = await supabase
-          .from("rooms")
-          .insert(payload)
-          .select("*")
-          .single();
-
-        if (insertError) {
-          throw insertError;
-        }
-
-        setRooms((current) => [data, ...current]);
-        showNotice("Room added.");
-      }
+      await saveRoom(payload);
+      setRooms(await getRooms());
+      showNotice(roomForm.id ? "Room updated." : "Room added.");
 
       setRoomForm(initialRoomForm);
       setRoomFiles([]);
@@ -238,14 +173,8 @@ export default function AdminDashboard({ adminState, refreshAdmin }) {
     }
 
     try {
-      const supabase = await requireSupabase();
-      const { error: deleteError } = await supabase.from("rooms").delete().eq("id", roomId);
-
-      if (deleteError) {
-        throw deleteError;
-      }
-
-      setRooms((current) => current.filter((room) => room.id !== roomId));
+      await deleteRoom(roomId);
+      setRooms(await getRooms());
       showNotice("Room deleted.");
     } catch (deleteError) {
       setError(deleteError.message || "Unable to delete room.");
@@ -254,19 +183,8 @@ export default function AdminDashboard({ adminState, refreshAdmin }) {
 
   const handleBookingStatus = async (bookingId, status) => {
     try {
-      const supabase = await requireSupabase();
-      const { data, error: updateError } = await supabase
-        .from("bookings")
-        .update({ status })
-        .eq("id", bookingId)
-        .select("*, rooms(name)")
-        .single();
-
-      if (updateError) {
-        throw updateError;
-      }
-
-      setBookings((current) => current.map((booking) => (booking.id === data.id ? data : booking)));
+      const updated = await updateBookingStatus(bookingId, status);
+      setBookings((current) => current.map((b) => (b.id === updated.id ? updated : b)));
       showNotice(`Booking marked ${status}.`);
     } catch (updateError) {
       setError(updateError.message || "Unable to update booking.");
@@ -283,24 +201,13 @@ export default function AdminDashboard({ adminState, refreshAdmin }) {
         throw new Error("Choose an image to upload.");
       }
 
-      const supabase = await requireSupabase();
-      const [url] = await uploadFilesToBucket("gallery-images", [galleryFile]);
-
-      const { data, error: insertError } = await supabase
-        .from("gallery")
-        .insert({
-          url,
-          caption: galleryForm.caption,
-          category: galleryForm.category,
-        })
-        .select("*")
-        .single();
-
-      if (insertError) {
-        throw insertError;
-      }
-
-      setGalleryItems((current) => [data, ...current]);
+      const [url] = await uploadFiles("gallery-images", [galleryFile]);
+      await saveGalleryItem({
+        url,
+        caption: galleryForm.caption,
+        category: galleryForm.category,
+      });
+      setGalleryItems(await getGallery());
       setGalleryForm(initialGalleryForm);
       setGalleryFile(null);
       showNotice("Gallery image uploaded.");
@@ -318,14 +225,8 @@ export default function AdminDashboard({ adminState, refreshAdmin }) {
     }
 
     try {
-      const supabase = await requireSupabase();
-      const { error: deleteError } = await supabase.from("gallery").delete().eq("id", itemId);
-
-      if (deleteError) {
-        throw deleteError;
-      }
-
-      setGalleryItems((current) => current.filter((item) => item.id !== itemId));
+      await deleteGalleryItem(itemId);
+      setGalleryItems(await getGallery());
       showNotice("Gallery image deleted.");
     } catch (deleteError) {
       setError(deleteError.message || "Unable to delete gallery item.");
@@ -589,7 +490,7 @@ export default function AdminDashboard({ adminState, refreshAdmin }) {
         ) : null}
 
         {activeTab === "gallery" ? (
-          <AdminSection title="Gallery" description="Upload or remove visual content from Supabase Storage.">
+          <AdminSection title="Gallery" description="Upload or remove visual content.">
             <form className="admin-form" onSubmit={handleGallerySubmit}>
               <div className="admin-form__grid">
                 <label className="field">

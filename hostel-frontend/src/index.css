@@ -209,8 +209,14 @@ p {
   background: var(--primary);
 }
 
-.navbar__toggle {
+.navbar__mobile-right {
   display: none;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.navbar__toggle {
+  display: inline-flex;
   flex-direction: column;
   gap: 4px;
   width: 44px;
@@ -220,6 +226,7 @@ p {
   background: rgba(255, 255, 255, 0.8);
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
 .navbar__divider {
@@ -1021,8 +1028,8 @@ p {
 }
 
 @media (max-width: 880px) {
-  .navbar__toggle {
-    display: inline-flex;
+  .navbar__mobile-right {
+    display: flex;
   }
 
   .navbar__divider {

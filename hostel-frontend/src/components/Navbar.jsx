@@ -43,11 +43,25 @@ export default function Navbar() {
           </div>
         </Link>
 
-        {/* Mobile toggle */}
-        <button className="navbar__toggle" type="button"
-          onClick={() => setOpen((p) => !p)} aria-label="Toggle navigation">
-          <span /><span /><span />
-        </button>
+        {/* Mobile right — auth buttons + toggle */}
+        <div className="navbar__mobile-right">
+          {!user && (
+            <>
+              <button className="button button--ghost button--small"
+                onClick={() => { openSignIn(); setOpen(false); }}>
+                Sign In
+              </button>
+              <button className="button button--primary button--small"
+                onClick={() => { openSignUp(); setOpen(false); }}>
+                Sign Up
+              </button>
+            </>
+          )}
+          <button className="navbar__toggle" type="button"
+            onClick={() => setOpen((p) => !p)} aria-label="Toggle navigation">
+            <span /><span /><span />
+          </button>
+        </div>
 
         {/* Nav links */}
         <nav className={open ? "navbar__links navbar__links--open" : "navbar__links"}>
@@ -69,7 +83,13 @@ export default function Navbar() {
                 onClick={() => setDropdownOpen((p) => !p)}
                 aria-expanded={dropdownOpen}
               >
-                <div className="nav-avatar">{avatarLetter}</div>
+                <div className="nav-avatar">
+                  {user.avatarUrl ? (
+                    <img className="nav-avatar__img" src={user.avatarUrl} alt={displayName} />
+                  ) : (
+                    avatarLetter
+                  )}
+                </div>
                 <div className="nav-profile__info">
                   <span className="nav-profile__greeting">Hi, {displayName}</span>
                   <span className="nav-profile__status">
@@ -86,7 +106,13 @@ export default function Navbar() {
               {dropdownOpen && (
                 <div className="nav-dropdown">
                   <div className="nav-dropdown__header">
-                    <div className="nav-avatar nav-avatar--lg">{avatarLetter}</div>
+                    <div className="nav-avatar nav-avatar--lg">
+                      {user.avatarUrl ? (
+                        <img className="nav-avatar__img nav-avatar__img--lg" src={user.avatarUrl} alt={displayName} />
+                      ) : (
+                        avatarLetter
+                      )}
+                    </div>
                     <div>
                       <strong>{displayName}</strong>
                       <span>{user.email}</span>

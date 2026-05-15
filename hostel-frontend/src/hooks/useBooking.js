@@ -34,6 +34,11 @@ export default function useBooking() {
     setSuccess("");
 
     try {
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(room.id)) {
+        throw new Error("Booking unavailable for sample rooms. Please contact us directly.");
+      }
+
       const supabase = await requireSupabase();
       const availability = await checkRoomAvailability({
         roomId: room.id,
